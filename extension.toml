@@ -1,0 +1,23 @@
+id = "mvbasic"
+name = "MV BASIC (jBASE/T24)"
+version = "0.1.0"
+schema_version = 1
+description = "MV BASIC / jBASE / T24 PickBASIC: syntax highlighting and formatter."
+authors = ["zed_proj"]
+languages = ["languages/mvbasic"]
+
+[lib]
+kind = "Rust"
+version = "0.7.0"
+
+# Grammar lives in this same repo; Zed clones `repository` and uses the
+# sub-directory `path`. `rev` must be a commit present in the repo.
+# After changing the grammar: commit, then update `rev` to the new sha.
+[grammars.mvbasic]
+repository = "https://github.com/YOUR_GITHUB_USER/zed-mvbasic"
+rev = "3f406a09317f7893320205be7ea969847f571ec2"
+path = "grammars/tree-sitter-mvbasic"
+
+[language_servers.jbasic-formatter]
+language = "MV BASIC"
+languages = []
