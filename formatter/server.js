@@ -3,8 +3,8 @@
 /**
  * MV BASIC formatter + the minimal LSP wrapper that serves it.
  *
- * Single file on purpose: the Zed extension embeds this script with
- * `include_str!` and runs it as `node -e "<this file>"`, so it must not
+ * Single file on purpose: the Zed extension downloads this script into its
+ * working directory and runs it as `node <path>/server.js`, so it must not
  * depend on any other file being on disk.
  *
  * Formatting logic ported verbatim from MVExtensions.mvbasic

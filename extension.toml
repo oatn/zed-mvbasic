@@ -3,7 +3,8 @@ name = "MV BASIC (jBASE/T24)"
 version = "0.1.0"
 schema_version = 1
 description = "MV BASIC / jBASE / T24 PickBASIC: syntax highlighting and formatter."
-authors = ["zed_proj"]
+authors = ["oatn"]
+repository = "https://github.com/oatn/zed-mvbasic"
 languages = ["languages/mvbasic"]
 
 [lib]

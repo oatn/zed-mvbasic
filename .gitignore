@@ -2,3 +2,4 @@
 /extension.wasm
 /grammars/mvbasic
 /grammars/*.wasm
+/.nuphus

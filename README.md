@@ -1,102 +1,147 @@
 # MV BASIC for Zed
 
-Zed 的 MV BASIC（jBASE / T24 / PickBASIC / UniVerse / UniData / D3 / OpenQM）扩展：
-语法高亮 + 格式化。移植自 VS Code 的
-[mvextensions.mvbasic](https://github.com/mvextensions/mvbasic)（MIT）。
+A [Zed](https://zed.dev) extension for MV BASIC — the Pick-family BASIC used by
+jBASE, Temenos T24, PickBASIC, UniVerse, UniData, D3 and OpenQM.
 
-只做两件事：**高亮** 和 **格式化**。不做编译、跳转、诊断。
+It does two things: **syntax highlighting** and **formatting**. It does not
+compile, run, index, or diagnose your programs.
 
-## 目录
+The grammar, highlighting queries and formatter are ported from the VS Code
+extension [mvextensions.mvbasic](https://github.com/mvextensions/mvbasic)
+(MIT).
 
-```
-extension.toml                      Zed 扩展清单（语言 + grammar + LSP）
-src/lib.rs                          用 Zed 自带 node 启动格式化服务
-languages/mvbasic/config.toml       语言名 MV BASIC，后缀 .b/.bas
-languages/mvbasic/highlights.scm    关键字 / 内建函数 / 标签 / 字符串高亮
-languages/mvbasic/brackets.scm      () [] 配对
-grammars/tree-sitter-mvbasic/       tree-sitter 语法（含已生成的 parser.c）
-formatter/server.js                 格式化逻辑 + 极简 LSP（单文件，编进 wasm）
-formatter/test_format.js            自检：node formatter/test_format.js
-```
+## Features
 
-## 安装
+- Syntax highlighting for keywords, built-in functions, labels, numbers,
+  strings and comments.
+- Bracket matching for `()`, `[]`, `"` and `'`.
+- Document formatting (`editor: format buffer`, or `format_on_save`), matching
+  the layout produced by the VS Code MV BASIC formatter.
 
-开发扩展：
-
-1. Zed → 命令面板 → `zed: install dev extension` → 选择本仓库目录
-   （含 `extension.toml` 的那一层）。
-2. 打开任意 `.b` / `.bas` 文件。
-
-格式化：命令面板 → `editor: format buffer`，或在 settings.json 里开
-`"format_on_save": "on"`。
-
-### 首次安装前提
-
-Zed 会把 tree-sitter 语法编译成 wasm，需要 wasi-sdk（默认从 GitHub 下载，
-国内常失败），下载后设置环境变量：
+## Repository layout
 
 ```
-WASI_SDK_PATH = D:\dev\wasi-sdk-25.0-x86_64-windows   (需重启 Zed)
+extension.toml                       Zed extension manifest
+src/lib.rs                           Starts the formatter language server
+languages/mvbasic/config.toml        Language "MV BASIC", suffixes .b / .bas
+languages/mvbasic/highlights.scm     Highlight queries
+languages/mvbasic/brackets.scm       Bracket pairs
+grammars/tree-sitter-mvbasic/        Tree-sitter grammar (parser.c is committed)
+formatter/server.js                  Formatter + minimal LSP, single file
+formatter/test_format.js             Formatter self-test
 ```
 
-另外 rust 的 gnu 工具链若缺 `libgcc_eh.a`（w64devkit 15.2 已并入 libgcc.a），
-cargo 会报 `cannot find -lgcc_eh`：
+## Installing
+
+### From the extension registry
+
+In Zed, open `zed: extensions`, search for **MV BASIC**, and install it. Open any
+`.b` or `.bas` file to activate the language.
+
+### As a dev extension
+
+1. `zed: extensions` → `Install Dev Extension`
+2. Select this repository's root directory (the one containing `extension.toml`).
+3. Open any `.b` or `.bas` file.
+
+### Build prerequisites
+
+Zed compiles the tree-sitter grammar to WebAssembly on first install, which
+requires wasi-sdk. Zed downloads it from GitHub automatically; if that fails,
+install it yourself and point Zed at it, then restart Zed:
+
+```
+WASI_SDK_PATH = D:\dev\wasi-sdk-25.0-x86_64-windows
+```
+
+On Windows, if the GNU Rust toolchain has no `libgcc_eh.a` (w64devkit 15.2 merged
+it into `libgcc.a`), cargo fails with `cannot find -lgcc_eh`. Work around it with:
 
 ```powershell
 ar rcs D:\dev\w64devkit\lib\gcc\x86_64-w64-mingw32\15.2.0\libgcc_eh.a
-rustup target add wasm32-wasip2   # Zed 1.27 用 wasip2
+rustup target add wasm32-wasip2   # Zed 1.27+ targets wasip2
 ```
 
-## 格式化服务怎么起来的
+## Formatting
 
-dev 扩展会被软链到 `extensions/installed/mvbasic`，而 wasm 里的 `current_dir()`
-是空的 `extensions/work/mvbasic`，读不到外面的文件。所以 `src/lib.rs` 用
-`include_str!` 把 `formatter/server.js` 编进 wasm，启动时执行：
+Run `editor: format buffer` from the command palette, or enable
+`"format_on_save": "on"` in `settings.json`.
 
-```
-<zed 自带 node> -e "<server.js 全文>\nstartServer();"
-```
+### How the formatter is started
 
-不依赖任何磁盘路径。改完 `formatter/server.js` 需要重装扩展（重新编译 wasm）。
+The formatter is a small Node.js language server, and it is **not** compiled
+into the extension. On first use the extension downloads
+`formatter/server.js` from this repository at the tag named in `src/lib.rs`
+(currently `v0.1.0`) into its own working directory, then runs it with the Node
+binary bundled with Zed. The downloaded copy is cached per tag, so no network
+access is needed afterwards.
 
-## 格式化选项
+If formatting fails on first use, check the Zed log (`zed: open log`) for a
+`could not download the MV BASIC formatter` message; it means the pinned tag is
+missing or unreachable.
 
-与原插件默认值一致，用环境变量覆盖（T24 风格：margin 4）：
+### Formatting options
 
-| 变量 | 默认 | 说明 |
-|------|------|------|
-| `MVBASIC_MARGIN` | 4 | 代码起始列 |
-| `MVBASIC_INDENT` | 4 | 每层缩进 |
-| `MVBASIC_INDENT_COMMENT` | ignore | `left` / `margin` / `code` / `ignore` |
-| `MVBASIC_FORMAT_STRUCTURE` | 1 | PROGRAM/SUBROUTINE/FUNCTION/STOP 顶格 |
+Defaults match the VS Code extension (T24 style: code starts at margin 4).
+Override them with environment variables:
 
-## 已知差异
+| Variable | Default | Meaning |
+|----------|---------|---------|
+| `MVBASIC_MARGIN` | `4` | Column where code starts |
+| `MVBASIC_INDENT` | `4` | Indent width per block |
+| `MVBASIC_INDENT_COMMENT` | `ignore` | `left` / `margin` / `code` / `ignore` |
+| `MVBASIC_FORMAT_STRUCTURE` | `1` | `1` keeps `PROGRAM`/`SUBROUTINE`/`FUNCTION`/`STOP` at column 0 |
 
-- 数字标签（`0010 X = 1`）按数字高亮，不按标签；`LABEL:` 形式正常。
-- 不做自动缩进（未提供 indents.scm），回车沿用上一行缩进。
+Set these before starting Zed (the formatter inherits Zed's shell environment).
 
-## 语法仓库怎么定位
+## Known differences from the VS Code extension
 
-Zed 装扩展时不读本地目录，而是 `git clone <repository>` 后 `checkout <rev>`，
-再在克隆结果里找 `path` 指定的子目录。所以语法就在本仓库里：
+- Numeric line labels (`0010 X = 1`) are highlighted as numbers, not as labels.
+  `LABEL:` style labels are highlighted as labels.
+- No `indents.scm`, so there is no automatic indentation: pressing Enter keeps
+  the previous line's indentation. Use the formatter instead.
+
+## Grammar
+
+The grammar lives in this repository and is registered by revision in
+`extension.toml`. Zed clones `repository`, checks out `rev`, and looks for the
+grammar in `path` — it never reads the local working tree:
 
 ```toml
 [grammars.mvbasic]
-repository = "https://github.com/YOUR_GITHUB_USER/zed-mvbasic"
-rev = "<本仓库的一个 commit sha>"
+repository = "https://github.com/oatn/zed-mvbasic"
+rev = "<a commit sha that contains grammars/tree-sitter-mvbasic>"
 path = "grammars/tree-sitter-mvbasic"
 ```
 
-克隆目标 `grammars/mvbasic/`、编译产物 `grammars/*.wasm`、`extension.wasm`、
-`target/` 都已 gitignore。
+Clone output (`grammars/mvbasic/`), build artifacts (`grammars/*.wasm`,
+`extension.wasm`) and `target/` are gitignored.
 
-## 改语法
+### Changing the grammar
 
 ```powershell
 cd grammars/tree-sitter-mvbasic
-# 改 grammar.js
-tree-sitter generate      # 重新生成 src/parser.c（要提交）
+# edit grammar.js
+tree-sitter generate      # regenerates src/parser.c (commit it)
 tree-sitter parse sample.b
-cd ../.. && git add -A && git commit -m "grammar: ..."
-git rev-parse HEAD        # 把新 sha 填回 extension.toml 的 rev，再提交
+cd ../.. ; git add -A ; git commit -m "grammar: ..."
+git rev-parse HEAD        # put the new sha into extension.toml's rev, commit again
 ```
+
+## Development
+
+```powershell
+node formatter/test_format.js                              # formatter self-test
+cargo build --target wasm32-wasip2 --release               # build the extension wasm
+```
+
+Reinstall the dev extension after touching `src/lib.rs` or `extension.toml`
+(the wasm is recompiled). After changing `formatter/server.js`, bump
+`SERVER_TAG` in `src/lib.rs` and `version` in `extension.toml`, push a matching
+tag, then reinstall — the tag is what invalidates the cached download.
+
+## License
+
+MIT. The formatter logic and the keyword/function lists are ported from
+[MVExtensions.mvbasic](https://github.com/mvextensions/mvbasic), also MIT; the
+copyright notice is preserved in [LICENSE](LICENSE).
