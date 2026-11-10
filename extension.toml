@@ -14,10 +14,9 @@ version = "0.7.0"
 # sub-directory `path`. `rev` must be a commit present in the repo.
 # After changing the grammar: commit, then update `rev` to the new sha.
 [grammars.mvbasic]
-repository = "https://github.com/YOUR_GITHUB_USER/zed-mvbasic"
-rev = "3f406a09317f7893320205be7ea969847f571ec2"
+repository = "https://github.com/oatn/zed-mvbasic"
+rev = "34b077e257b9831656947a67fc33309aaeeabe52"
 path = "grammars/tree-sitter-mvbasic"
 
 [language_servers.jbasic-formatter]
-language = "MV BASIC"
-languages = []
+languages = ["MV BASIC"]
